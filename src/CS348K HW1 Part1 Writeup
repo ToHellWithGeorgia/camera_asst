@@ -1,0 +1,34 @@
+CS348K HW1 Part1 Writeup
+Zhihan Jiang - zhihanj
+
+My image processing pipeline for part1 includes 4 parts: detecting and 
+correcting static defects, demosaicking, denoising and global tone mapping.
+
+1. Static defects:
+I tried to use the methods in https://www.ingentaconnect.com/contentone/ist/ei/2017/00002017/00000015/art00008?crawler=true&mimetype=application/pdf. In 
+order to detect a defect, the following conditions must bet met: the pixel is 
+significantly different from the same-color neighbours in the 5x5 Bayer window
+(notice we are processing directly on Bayer raw input), and the local
+brightness difference is significantly different from the highest/smallest
+brightness difference in the 3x3 Bayer window. Combining the two we will have
+a robust detection of the defects. For the correct, we simply take the median
+of the 8 same-color sensor in the 5x5 window. Later in the assignment I will
+try to implement a more sophiscated correction mechanism.
+
+2. Demosaicking
+We follow the instructions and use a bilinear demosaicking mentioned in the
+slides. We mirror the edge for the image edge.
+
+3. Denoising
+We apply a 5x5 Gaussian blur kernel to the image. We use an approximate kernel
+and decomposite the process into row convolution and column convolution. The
+resulting image is less noisy.
+
+4. Global tone mapping
+I tried 3 ways of tone mapping: linear, tangent and gamma curve. The linear 
+produces unsatisfactory images where the dark region of the image is too dark.
+The tangent mapping I derive (42.36486 * (3.00957 + tan(2.5 * input - 1.25)))
+is better at forcing the higher and lower pixels to the middle. The output
+image is clearer than the provided reference solution, but is also darker.
+The gamma curve is implemented as in the slides. It produces an image as good
+as the reference image. I submitted the gamma curve one.

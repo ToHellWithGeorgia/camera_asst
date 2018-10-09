@@ -1,0 +1,5 @@
+bin/
+build/
+scenes
+*.bmp
+src/.DS_Store
