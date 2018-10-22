@@ -1,0 +1,47 @@
+CS 348K HW1 Part2 Writeup
+
+For the part2, we build 2 parts for the image pipeline: local tone mapping and
+burst mode alignment for denoising. The resulting images perform better than
+the reference image.
+
+Local tone mapping:
+We follow the rubric in the handout, first convert the RGB image generated in
+part 1 to YUV to extract the grayscale. Then we boost the Y channel by 
+multiplying some factor (x1.3) to create a brighter image (more exposure).
+We then use the contrast, saturation, well-exposedness weight discussed in the
+exposure fusion paper to compute the weight for each pixel in 2 images.
+We then compute the Gaussian and Laplacian pyramid for the images and the
+weight, blending the Laplacian pyramids using the weights, and plug the fused
+grayscale as Y channel back to the YUV image. The resulting image has more
+details in both bright and dark region of the images.
+
+Burst mode alignment:
+I first downsample the RAW bayer images from the burst to grayscale, compute
+the GP for each of the images. For the alignment, I use tile size 16, stride 8,
+and search radius 8 at all depth, and use gaussian kernel to upsample the 
+offset to the next layer. After we get the top layer offset, we apply it on the
+Bayer raw frame to get the merged result. I use the L1 distance as the metric,
+and use the raised cosine window to smooth the merging process. I cap the
+distance of a tile at 3.0f, and linearly scale the distance as weight from
+0.5 to 3.0 (anything below 0.5 has weight 1.0, and anything beyond 3.0 has
+weight 0).
+
+Runtime:
+~42 seconds for the taxi.bin (aligning and merging take 28 seconds)
+~91 seconds for the church.bin (aligning and merging take 66 seconds)
+~446 seconds for the path.bin (aligning and merging take 389 seconds)
+
+One thing we can do to boost the pipeline is to decrease the search radius in
+the aligning process along the depth of the GP. It can boost the runtime by 2x,
+while sacrificing some quality of the image. I decide to keep the longer one
+since we are graded on the quality, not runtime.
+
+Comparation to the reference output:
+Pros: 
+The output image has no weird blur at the edge of the image;
+The edges are smoother than the reference output (for human and object);
+The noise is significantly less than the reference.
+
+Cons: 
+The saturation (hue) is better for the reference image;
+Runtime for the large image is too long.

@@ -3,3 +3,5 @@ build/
 scenes
 *.bmp
 src/.DS_Store
+*.m
+.DS_Store

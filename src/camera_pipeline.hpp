@@ -7,7 +7,7 @@
 #include "image.hpp"
 #include "pixel.hpp"
 
-#include<iostream>
+#include <iostream>
 using namespace std;
 
 class CameraPipeline : public CameraPipelineInterface {
@@ -41,24 +41,70 @@ class CameraPipeline : public CameraPipelineInterface {
     return 42.36486 * (3.00957 + tan(2.5 * input - 1.25));
   }
 
-  // Check the defects by finding outstanding weird pixel.
-  //
-  inline float check_defect(float r, float g, float b) const {
-    float thre = 0.000000001f;
-    bool r_sat = (abs(r - 0.f) < thre) || (abs(r - 1.f) < thre);
-    bool g_sat = (abs(g - 0.f) < thre) || (abs(g - 1.f) < thre);
-    bool b_sat = (abs(b - 0.f) < thre) || (abs(b - 1.f) < thre);
-    return (r_sat && !g_sat && !b_sat) ||
-            (!r_sat && g_sat && !b_sat) || (!r_sat && !g_sat && b_sat);
-  }
-
   inline float min4(float a, float b, float c, float d) const {
     return min(min(min(a,b),c),d);
   }
 
   inline float max4(float a, float b, float c, float d) const {
     return max(max(max(a,b),c),d);
-  }  
+  }
+
+  inline float stdev3(float a, float b, float c) const {
+    float mean = (a+b+c) / 3.f;
+    return sqrt((1.f/3.f) * ((a - mean) * (a - mean) + (b - mean) * (b - mean) +
+                             (c - mean) * (c - mean)));
+  }
+
+  inline float gausscurve(float i, float sigma = 0.2f) const {
+    return exp(-((i - 0.5f) * (i - 0.5f)) / (2 * sigma * sigma));
+  }
+
+  inline float coswin(int row, int col, float n) const {
+    float PI = 3.14159265;
+    float x = sqrt((float)(row*row + col*col));
+    return 0.5 - 0.5 * cos(2*PI*(x+0.5f)/n);
+  }
+
+  // Convolve the image with the kernel.
+  //
+  void convolve(std::unique_ptr<Image<RgbPixel>>& image, 
+                int width, int height, int kernel_length,
+                float* kernel, bool is_abs = false) const;
+
+  // Calculate the gaussian pyramid and save to the vector
+  //
+  void gp_pyramid(std::unique_ptr<Image<RgbPixel>>& image,
+                  std::vector<std::unique_ptr<Image<RgbPixel>>>& out,
+                  int width, int height, int depth, bool is_gauss = true) const;
+
+  // Calculate the Laplacian pyramid and save to the vector
+  //
+  void lp_pyramid(std::unique_ptr<Image<RgbPixel>>& image,
+                  std::vector<std::unique_ptr<Image<RgbPixel>>>& out,
+                  int width, int height, int depth) const;
+
+  // Reconstruct the image using the laplacian pyramid
+  //
+  void lp_reconstruct(std::vector<std::unique_ptr<Image<RgbPixel>>>& out,
+                      int width, int height) const;
+
+  // Convolve and fuse the pyramid with the weight
+  //
+  void lp_fuse(std::vector<std::unique_ptr<Image<RgbPixel>>>& out,
+               std::vector<std::unique_ptr<Image<RgbPixel>>>& lp1,
+               std::vector<std::unique_ptr<Image<RgbPixel>>>& gp1,
+               std::vector<std::unique_ptr<Image<RgbPixel>>>& lp2,
+               std::vector<std::unique_ptr<Image<RgbPixel>>>& gp2,
+               int width, int height) const;
+
+  // Align 2 Gaussian pyramid, by calculating the offset and distance.
+  // There is a search radius associated.
+  //
+  void gp_align(std::vector<std::unique_ptr<Image<RgbPixel>>>& gp1,
+                std::vector<std::unique_ptr<Image<RgbPixel>>>& gp2,
+                std::unique_ptr<Image<RgbPixel>>& out,
+                int width, int height, int depth,
+                int tile, int stride, int radi) const;
 
   //
   // END: CS348K STUDENTS MODIFY THIS CODE  
